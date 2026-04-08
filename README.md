@@ -51,26 +51,17 @@ On first launch, enter your NVIDIA API key in the app settings.
 ## App Flow
 
 1. Open the app and start a scan.
-2. Log in to Ducklink in the embedded browser.
-3. Let the app navigate to the Events tab and scrape listings.
-4. Wait while OCR and food detection run.
-5. Review food events at the top of the results list.
+2. Let the app load Ducklink and scrape the Events tab.
+3. Wait while OCR and food detection run.
+4. Review food events at the top of the results list.
 
-```mermaid
-flowchart TD
-  A[Start Scan] --> B[Open Ducklink in embedded browser]
-  B --> C[Log in with Okta]
-  C --> D[Navigate to Events tab]
-  D --> E[Scrape event cards]
-  E --> F[Extract name, time, location, description]
-  E --> G[Download event images]
-  G --> H[Run OCR on images]
-  F --> I[Combine event text]
-  H --> I
-  I --> J[Send to NVIDIA NIM]
-  J --> K[Classify food vs non-food]
-  K --> L[Sort food events first]
-  L --> M[Display results]
+```text
+Start Scan -> Ducklink Events Tab -> Scrape cards/images
+                                   -> Extract text
+                                   -> OCR flyer text
+                                   -> Merge text
+                                   -> NVIDIA NIM
+                                   -> Sort + display results
 ```
 
 ## Project Structure
