@@ -56,6 +56,23 @@ On first launch, enter your NVIDIA API key in the app settings.
 4. Wait while OCR and food detection run.
 5. Review food events at the top of the results list.
 
+```mermaid
+flowchart TD
+  A[Start Scan] --> B[Open Ducklink in embedded browser]
+  B --> C[Log in with Okta]
+  C --> D[Navigate to Events tab]
+  D --> E[Scrape event cards]
+  E --> F[Extract name, time, location, description]
+  E --> G[Download event images]
+  G --> H[Run OCR on images]
+  F --> I[Combine event text]
+  H --> I
+  I --> J[Send to NVIDIA NIM]
+  J --> K[Classify food vs non-food]
+  K --> L[Sort food events first]
+  L --> M[Display results]
+```
+
 ## Project Structure
 
 - `src/main` - Electron main process, services, and IPC handlers
