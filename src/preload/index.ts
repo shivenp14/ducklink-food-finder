@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '../main/ipc/channels';
+import type { ScrapedEvent } from '../renderer/src/types';
 
 interface ScanProgressData {
   stage: string;
@@ -9,8 +10,8 @@ interface ScanProgressData {
 
 interface ScanResultData {
   date: string;
-  events: unknown[];
-  foodEvents: unknown[];
+  events: ScrapedEvent[];
+  foodEvents: ScrapedEvent[];
   scanDuration: number;
   fromCache: boolean;
 }
@@ -20,12 +21,6 @@ interface ScanErrorData {
   message: string;
   retryAttempt: number;
   isFinal: boolean;
-}
-
-interface CacheInfo {
-  date: string;
-  eventCount: number;
-  timestamp: number;
 }
 
 contextBridge.exposeInMainWorld('api', {
@@ -42,6 +37,7 @@ contextBridge.exposeInMainWorld('api', {
   // Cache
   clearCache: () => ipcRenderer.invoke(IPC.CACHE_CLEAR),
   getCacheInfo: () => ipcRenderer.invoke(IPC.CACHE_INFO),
+  getCachedScan: () => ipcRenderer.invoke(IPC.CACHE_GET),
 
   // Browser
   openExternal: (url: string) => ipcRenderer.invoke(IPC.BROWSER_OPEN_EXTERNAL, url),

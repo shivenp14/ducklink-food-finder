@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ScanProgress, ScanError, ScrapedEvent } from '../types';
+import { ScanProgress, ScanError, ScrapedEvent, ScanResult } from '../types';
 
 type ScanState = 'idle' | 'scanning' | 'error' | 'done';
 
@@ -34,11 +34,6 @@ export function useScan() {
     setState('scanning');
     setError(null);
     setProgress(null);
-    setFromCache(false);
-    if (forceRefresh) {
-      setEvents([]);
-      setFoodEvents([]);
-    }
     try {
       await window.api.startScan(forceRefresh);
     } catch (err) {
@@ -65,5 +60,14 @@ export function useScan() {
     setFromCache(false);
   }, []);
 
-  return { state, progress, error, events, foodEvents, fromCache, startScan, cancelScan, reset };
+  const hydrateResult = useCallback((data: ScanResult) => {
+    setState('done');
+    setProgress(null);
+    setError(null);
+    setEvents(data.events);
+    setFoodEvents(data.foodEvents);
+    setFromCache(data.fromCache);
+  }, []);
+
+  return { state, progress, error, events, foodEvents, fromCache, startScan, cancelScan, reset, hydrateResult };
 }

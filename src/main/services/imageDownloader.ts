@@ -91,21 +91,18 @@ export function cleanupImages(): void {
   }
 }
 
-export function getImageDataUrl(imagePath: string): string | null {
-  try {
-    const buffer = fs.readFileSync(imagePath);
-    const extension = path.extname(imagePath).toLowerCase();
-    const mimeType = extension === '.png'
-      ? 'image/png'
-      : extension === '.gif'
-        ? 'image/gif'
-        : extension === '.webp'
-          ? 'image/webp'
-          : 'image/jpeg';
+export function getLocalImageDataUrl(filepath: string | null): string | null {
+  if (!filepath || !fs.existsSync(filepath)) {
+    return null;
+  }
 
+  try {
+    const buffer = fs.readFileSync(filepath);
+    const extension = path.extname(filepath).toLowerCase();
+    const mimeType = getMimeType(extension);
     return `data:${mimeType};base64,${buffer.toString('base64')}`;
   } catch (error) {
-    logger.warn(`Failed to read image data for ${imagePath}: ${(error as Error).message}`);
+    logger.warn(`Failed to convert image to data URL for ${filepath}: ${(error as Error).message}`);
     return null;
   }
 }
@@ -113,4 +110,19 @@ export function getImageDataUrl(imagePath: string): string | null {
 function getImageExtension(url: string): string {
   const match = url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i);
   return match ? `.${match[1].toLowerCase()}` : '.jpg';
+}
+
+function getMimeType(extension: string): string {
+  switch (extension) {
+    case '.png':
+      return 'image/png';
+    case '.gif':
+      return 'image/gif';
+    case '.webp':
+      return 'image/webp';
+    case '.jpg':
+    case '.jpeg':
+    default:
+      return 'image/jpeg';
+  }
 }

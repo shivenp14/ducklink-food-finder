@@ -46,31 +46,31 @@ export default function ErrorMessage({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-8">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-5 sm:gap-6 px-5 sm:px-8 py-8">
       <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center">
         <span className="text-4xl">{config.icon}</span>
       </div>
 
-      <h2 className="text-2xl font-semibold text-center text-red-400">
+      <h2 className="text-xl sm:text-2xl font-semibold text-center text-red-400">
         {config.title}
       </h2>
 
-      <p className="text-gray-400 text-center max-w-md">{config.suggestion}</p>
+      <p className="text-gray-400 text-center max-w-md text-sm sm:text-base leading-relaxed">{config.suggestion}</p>
 
       <div className="bg-gray-900 rounded-lg p-3 max-w-md w-full">
         <p className="text-xs text-gray-500 font-mono break-all">{message}</p>
       </div>
 
-      <div className="flex gap-4 mt-2">
+      <div className="flex w-full max-w-md flex-col sm:flex-row gap-3 mt-2">
         <button
           onClick={onBack}
-          className="px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+          className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
         >
           Back to Home
         </button>
         <button
           onClick={onRetry}
-          className="px-6 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg font-semibold transition-colors cursor-pointer"
+          className="w-full px-6 py-3 bg-orange-500 hover:bg-orange-600 rounded-lg font-semibold transition-colors cursor-pointer"
         >
           Try Again
         </button>

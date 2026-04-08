@@ -27,6 +27,7 @@ export interface ScrapedEvent {
   combinedText: string
   hasFood: boolean
   foodReasoning: string
+  foodConfidence: number
   sourceUrl: string
 }
 

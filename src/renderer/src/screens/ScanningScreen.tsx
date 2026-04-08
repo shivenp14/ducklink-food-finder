@@ -52,59 +52,56 @@ export default function ScanningScreen({
   const progressPercent = Math.max(10, progress?.progress ?? 0)
 
   return (
-    <div className="max-w-6xl mx-auto pb-12">
+    <div className="max-w-6xl mx-auto pb-8">
       {/* Hero Scanning Header */}
-      <section className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3 mb-4">
+      <section className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-2 max-w-3xl">
+          <div className="flex items-center gap-3 mb-3">
             <div className="w-3 h-3 bg-tertiary rounded-full availability-pulse"></div>
             <span className="text-tertiary font-bold tracking-widest text-xs uppercase font-headline">Live Scrape in Progress</span>
           </div>
-          <h2 className="text-5xl font-headline font-extrabold text-on-surface tracking-tight leading-tight">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-headline font-extrabold text-on-surface tracking-tight leading-tight">
             Analyzing the <br/><span className="text-primary italic">Ducklink</span> Ecosystem.
           </h2>
-          <p className="text-on-surface-variant max-w-xl text-lg leading-relaxed pt-2">
+          <p className="text-on-surface-variant max-w-xl text-sm sm:text-base lg:text-lg leading-relaxed pt-1">
             Our concierge is currently navigating campus events to identify available culinary opportunities. This typically takes 45-60 seconds.
           </p>
         </div>
         
-        <div className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/10 min-w-[280px]">
+        <div className="w-full md:w-auto bg-surface-container-lowest p-4 sm:p-5 rounded-2xl shadow-sm border border-outline-variant/10 min-w-0 md:min-w-[260px]">
           <div className="flex justify-between items-end mb-2">
             <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Global Progress</span>
-            <span className="text-2xl font-headline font-black text-primary">{Math.round(progressPercent)}%</span>
+            <span className="text-xl sm:text-2xl font-headline font-black text-primary">{Math.round(progressPercent)}%</span>
           </div>
-          <div className="h-3 w-full bg-surface-container rounded-full overflow-hidden">
+          <div className="h-2.5 sm:h-3 w-full bg-surface-container rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }}></div>
           </div>
           <button
             onClick={onCancel}
-            className="w-full mt-4 py-2 bg-surface-container-highest hover:bg-surface-container-high rounded-full text-xs font-bold text-on-surface-variant uppercase tracking-widest transition-colors"
+            className="w-full mt-3 py-2 bg-surface-container-highest hover:bg-surface-container-high rounded-full text-xs font-bold text-on-surface-variant uppercase tracking-widest transition-colors"
           >
             Cancel Scan
           </button>
         </div>
       </section>
 
-      {/* Asymmetric Scanning Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left: Detailed Process Status (The Main List) */}
-        <div className="lg:col-span-7 space-y-6">
+      <div className="grid gap-4 lg:gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)] xl:items-stretch">
           {/* Live Browser Preview Section */}
-          <div className="bg-inverse-surface rounded-3xl overflow-hidden shadow-2xl mb-8 border border-surface-container-highest/20">
-            <div className="bg-slate-800/50 px-6 py-3 flex items-center justify-between border-b border-white/5">
-              <div className="flex items-center gap-4">
+          <div className="flex h-full flex-col bg-inverse-surface rounded-3xl overflow-hidden shadow-2xl border border-surface-container-highest/20 min-h-0 xl:max-h-[calc(100vh-16rem)]">
+            <div className="bg-slate-800/50 px-4 sm:px-6 py-3 flex items-center justify-between border-b border-white/5">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
                 </div>
-                <div className="h-6 w-px bg-white/10 mx-2"></div>
-                <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+                <div className="h-6 w-px bg-white/10 mx-1 sm:mx-2"></div>
+                <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 min-w-0">
                   <span className="material-symbols-outlined text-xs">language</span>
-                  <span className="truncate max-w-[200px]">{currentUrl || 'ducklink.stevens.edu/events'}</span>
+                  <span className="truncate max-w-[140px] sm:max-w-[220px]">{currentUrl || 'ducklink.stevens.edu/events'}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 shrink-0">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -113,7 +110,7 @@ export default function ScanningScreen({
               </div>
             </div>
             
-            <div className="relative aspect-video bg-slate-900 overflow-hidden group flex items-center justify-center">
+            <div className="relative aspect-[16/10] min-h-[220px] sm:min-h-[260px] lg:min-h-[320px] flex-1 bg-slate-900 overflow-hidden group flex items-center justify-center xl:aspect-auto xl:min-h-0">
               {previewUrl ? (
                 <>
                   <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/50 shadow-[0_0_15px_2px_rgba(163,38,56,0.8)] z-20 animate-[scan_3s_linear_infinite]" />
@@ -140,18 +137,17 @@ export default function ScanningScreen({
           </div>
 
           {/* Analysis Pipeline */}
-          <div className="bg-surface-container-low rounded-3xl p-8 space-y-8">
+          <div className="h-full min-h-0 bg-surface-container-low rounded-3xl p-5 sm:p-6 xl:p-8 space-y-5 xl:space-y-6 xl:max-h-[calc(100vh-16rem)] xl:overflow-y-auto">
             <h3 className="text-xl font-headline font-bold text-on-surface px-2">Analysis Pipeline</h3>
             <div className="space-y-4">
               {STAGES.map((stage, i) => {
                 const isPast = i < currentStageIndex
                 const isCurrent = i === currentStageIndex
-                const isFuture = i > currentStageIndex
 
                 if (isPast) {
                   return (
-                    <div key={stage.key} className="flex items-center gap-6 p-4 rounded-2xl bg-surface-container-lowest transition-all hover:scale-[1.01]">
-                      <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-tertiary-container text-on-tertiary-container">
+                    <div key={stage.key} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-surface-container-lowest transition-all hover:scale-[1.01]">
+                      <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-tertiary-container text-on-tertiary-container">
                         <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                       </div>
                       <div className="flex-1">
@@ -165,8 +161,8 @@ export default function ScanningScreen({
 
                 if (isCurrent) {
                   return (
-                    <div key={stage.key} className="flex items-center gap-6 p-4 rounded-2xl bg-surface-container-lowest border-2 border-primary/10 shadow-lg shadow-primary/5 transition-all">
-                      <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-primary text-on-primary">
+                    <div key={stage.key} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-surface-container-lowest border-2 border-primary/10 shadow-lg shadow-primary/5 transition-all">
+                      <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-primary text-on-primary">
                         <span className="material-symbols-outlined animate-spin">{stage.icon}</span>
                       </div>
                       <div className="flex-1 overflow-hidden">
@@ -181,8 +177,8 @@ export default function ScanningScreen({
                 }
 
                 return (
-                  <div key={stage.key} className="flex items-center gap-6 p-4 rounded-2xl bg-surface-container-low opacity-60">
-                    <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-surface-container-high text-slate-400">
+                    <div key={stage.key} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-surface-container-low opacity-60">
+                    <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-container-high text-slate-400">
                       <span className="material-symbols-outlined">{stage.icon}</span>
                     </div>
                     <div className="flex-1">
@@ -204,52 +200,6 @@ export default function ScanningScreen({
               )}
             </div>
           </div>
-        </div>
-
-        {/* Right: High-end Contextual Cards */}
-        <div className="lg:col-span-5 space-y-8 hidden md:block">
-          {/* AI Preview Card */}
-          <div className="relative overflow-hidden rounded-3xl bg-inverse-surface text-inverse-on-surface p-8 shadow-2xl">
-            <div className="absolute -right-8 -top-8 w-48 h-48 bg-primary/20 rounded-full blur-3xl"></div>
-            <div className="relative z-10 space-y-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-primary-fixed-dim" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-                <span className="text-xs font-bold uppercase tracking-widest text-primary-fixed-dim">Intelligence Preview</span>
-              </div>
-              <h5 className="text-2xl font-headline font-bold">Scanning Buffer</h5>
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/5 font-mono text-xs text-slate-300">
-                  <p className="mb-1">&gt; STAGE: {progress?.stage?.toUpperCase() || 'INITIALIZING'}</p>
-                  <p className="mb-1">&gt; ANALYZING INTENT: {progressPercent}% Probability</p>
-                  <p className="text-primary-fixed-dim truncate">&gt; LAST MSG: {progress?.message || 'Waiting for events...'}</p>
-                </div>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  Our LLM is cross-referencing event descriptions with known free-food indicators (e.g., "refreshments", "catered", "pizza").
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Campus Map Glimpse */}
-          <div className="bg-surface-container-low rounded-3xl overflow-hidden group">
-            <div className="h-48 w-full bg-surface-dim relative">
-              <img alt="Campus Grid Overlay" className="w-full h-full object-cover mix-blend-overlay grayscale group-hover:scale-110 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMSo5F1Cw0haQ-jt3wFF5-H7m2TnD84dVO2k4_q6_h7zTUKSE5f_OroODbwSB6ykYwvuqMNoIxuU60sdUJKVHdZlUuOyBiKOgWqIwWgVXjQKdy2ymGGMLVqYJDt6eglCgvZt-H-SrTwLeOLLBgPXXh0Vh-s2E3aYIC1cobeufFHkUXpXm641DDJXMmtf90t3aUMNcd-T0sxYXXIOK2IjujfgQeWNDoAsKtHmnpwM56XuXwhyODxRQ6kzNFc40CC_lsRiy6qOuOscY"/>
-              <div className="absolute inset-0 bg-gradient-to-t from-surface-container-low to-transparent"></div>
-              <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                <span className="text-sm font-bold text-on-surface">Stevens North Campus</span>
-              </div>
-            </div>
-            <div className="p-6">
-              <h5 className="font-bold text-on-surface mb-2">Active Target Zones</h5>
-              <div className="flex flex-wrap gap-2">
-                <span className="px-3 py-1 bg-surface-container-highest rounded-full text-xs font-medium text-on-surface-variant">Babbio Center</span>
-                <span className="px-3 py-1 bg-surface-container-highest rounded-full text-xs font-medium text-on-surface-variant">Howe Center</span>
-                <span className="px-3 py-1 bg-surface-container-highest rounded-full text-xs font-medium text-on-surface-variant">UCC Gateway</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )

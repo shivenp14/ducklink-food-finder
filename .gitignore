@@ -12,6 +12,8 @@ release/
 *.dmg
 *.zip
 *.app
+resources/icon.iconset/
+resources/icon.svg.png
 
 # Test artifacts
 test-results/

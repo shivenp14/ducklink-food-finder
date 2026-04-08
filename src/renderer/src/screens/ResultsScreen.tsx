@@ -1,26 +1,53 @@
 import { ScrapedEvent } from '../types'
 
+const TIME_VALUE_PATTERN = String.raw`(?<![:\d])\d{1,2}(?::\d{2})?\s*[AP]M`
+const TIME_SUFFIX_PATTERN = String.raw`(?:\s+[A-Z]{2,5}(?:\s*\(GMT[+-]\d{1,2}\))?)?`
+const TIME_RANGE_REGEX = new RegExp(
+  String.raw`\b(${TIME_VALUE_PATTERN})\s*[–-]\s*(${TIME_VALUE_PATTERN}${TIME_SUFFIX_PATTERN})\b`,
+  'i'
+)
+const SINGLE_TIME_REGEX = new RegExp(
+  String.raw`\b(${TIME_VALUE_PATTERN}${TIME_SUFFIX_PATTERN})\b`,
+  'i'
+)
+
 interface Props {
   events: ScrapedEvent[]
   foodEvents: ScrapedEvent[]
   fromCache: boolean
-  onRescan: () => void
+  onSettings: () => void
   onRefresh: () => void
-  onHome: () => void
 }
 
 export default function ResultsScreen({
   events,
   foodEvents,
   fromCache,
-  onRescan,
+  onSettings,
   onRefresh,
-  onHome,
 }: Props) {
   const otherEvents = events.filter((e) => !e.hasFood)
   const hasPartialFailure = events.some(
     (e) => e.foodReasoning === 'Food detection failed for this batch'
   )
+  const averageFoodConfidence = foodEvents.length
+    ? foodEvents.reduce((sum, event) => sum + (event.foodConfidence ?? 0), 0) / foodEvents.length
+    : 0
+
+  const getCertaintyLabel = (confidence: number): string => {
+    if (confidence >= 0.8) return 'High Certainty'
+    if (confidence >= 0.5) return 'Medium Certainty'
+    return 'Low Certainty'
+  }
+
+  const getCertaintyTone = (confidence: number): string => {
+    if (confidence >= 0.8) return 'bg-tertiary-container text-on-tertiary-container'
+    if (confidence >= 0.5) return 'bg-secondary-container text-on-secondary-container'
+    return 'bg-surface-container-high text-on-surface-variant'
+  }
+
+  const formatConfidence = (confidence: number): string => `${Math.round(confidence * 100)}%`
+
   const openEvent = (url: string) => {
     if (!url) return
     void window.api.openExternal(url)
@@ -28,67 +55,49 @@ export default function ResultsScreen({
 
   return (
     <div className="max-w-6xl mx-auto">
-      <header className="mb-12">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <header className="mb-8 sm:mb-10">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <span className="text-primary font-headline font-bold uppercase tracking-widest text-xs">Scan Results</span>
-            <h1 className="text-5xl font-headline font-extrabold tracking-tight mt-2">Campus Feed Updated</h1>
-            <p className="text-on-surface-variant mt-2 text-lg max-w-2xl">
-              We've identified {events.length} active events across the Hoboken campus. High confidence of catering detected at {foodEvents.length} locations.
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-headline font-extrabold tracking-tight mt-2">Campus Feed Updated</h1>
+            <p className="text-on-surface-variant mt-2 text-sm sm:text-base lg:text-lg max-w-2xl leading-relaxed">
+              We've identified {events.length} active events across the Hoboken campus. {getCertaintyLabel(averageFoodConfidence).toLowerCase()} confidence of catering detected at {foodEvents.length} locations.
               {fromCache && ' (Loaded from cache)'}
             </p>
           </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={fromCache ? onRefresh : onRescan}
-              className="px-6 py-3 bg-surface-container-high text-primary font-headline font-bold rounded-full hover:bg-surface-dim transition-colors cursor-pointer"
+          <div className="flex w-full flex-col sm:flex-row items-stretch sm:items-center gap-3 md:w-auto md:justify-end">
+            <button
+              onClick={onSettings}
+              aria-label="Open settings"
+              className="flex h-11 w-full sm:h-12 sm:w-12 shrink-0 items-center justify-center gap-2 self-center rounded-full bg-surface-container-high text-primary shadow-sm transition-colors hover:bg-surface-dim cursor-pointer"
             >
-              {fromCache ? 'Refresh Data' : 'Re-Scan Campus'}
+              <span className="material-symbols-outlined">settings</span>
+              <span className="text-sm font-bold sm:hidden">Settings</span>
             </button>
             <button 
-              onClick={onHome}
-              className="px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-white font-headline font-bold rounded-full shadow-lg hover:opacity-90 transition-opacity cursor-pointer"
+              onClick={onRefresh}
+              className="w-full sm:w-auto px-6 py-3 bg-surface-container-high text-primary font-headline font-bold rounded-full hover:bg-surface-dim transition-colors cursor-pointer"
             >
-              Back Home
+              Refresh Data
             </button>
           </div>
         </div>
 
         {/* Bento Dashboard Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-          <div className="col-span-1 md:col-span-2 bg-surface-container-lowest p-8 rounded-2xl shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-10">
+          <div className="col-span-1 lg:col-span-2 bg-surface-container-lowest p-6 sm:p-8 rounded-2xl shadow-sm">
+            <div>
               <div>
                 <h3 className="font-headline font-bold text-slate-500 text-sm uppercase">Total Events Found</h3>
-                <div className="text-6xl font-headline font-extrabold mt-2">{events.length}</div>
-              </div>
-              <div className="flex items-center gap-2 bg-tertiary-container/20 text-tertiary px-3 py-1 rounded-full">
-                <span className="w-2 h-2 rounded-full bg-tertiary availability-pulse"></span>
-                <span className="text-xs font-bold uppercase">Live Tracking</span>
-              </div>
-            </div>
-            
-            <div className="mt-8 flex gap-4 overflow-x-auto pb-2">
-              {/* Dummy location stats to match design since actual grouping by location is not in types */}
-              <div className="bg-surface-container-low px-4 py-2 rounded-xl flex-shrink-0">
-                <span className="text-xs font-medium text-slate-500 block">Schaefer Hall</span>
-                <span className="text-lg font-bold">5 Events</span>
-              </div>
-              <div className="bg-surface-container-low px-4 py-2 rounded-xl flex-shrink-0">
-                <span className="text-xs font-medium text-slate-500 block">UCC Tower</span>
-                <span className="text-lg font-bold">3 Events</span>
-              </div>
-              <div className="bg-surface-container-low px-4 py-2 rounded-xl flex-shrink-0">
-                <span className="text-xs font-medium text-slate-500 block">Babbio Center</span>
-                <span className="text-lg font-bold">4 Events</span>
+                <div className="text-5xl sm:text-6xl font-headline font-extrabold mt-2">{events.length}</div>
               </div>
             </div>
           </div>
           
-          <div className="bg-primary bg-gradient-to-br from-primary to-primary-container p-8 rounded-2xl text-white flex flex-col justify-between shadow-lg">
+          <div className="bg-primary bg-gradient-to-br from-primary to-primary-container p-6 sm:p-8 rounded-2xl text-white flex flex-col justify-between shadow-lg">
             <div>
               <h3 className="font-headline font-bold opacity-80 text-sm uppercase">Free Food Detection</h3>
-              <div className="text-6xl font-headline font-extrabold mt-2">{foodEvents.length.toString().padStart(2, '0')}</div>
+              <div className="text-5xl sm:text-6xl font-headline font-extrabold mt-2">{foodEvents.length.toString().padStart(2, '0')}</div>
               <p className="mt-4 text-sm font-medium leading-relaxed opacity-90">
                 Catering confirmed by vision AI and attendee metadata. Check the feed below.
               </p>
@@ -104,12 +113,12 @@ export default function ResultsScreen({
       {/* Warning Area */}
       {hasPartialFailure && (
         <section className="max-w-6xl mx-auto mb-10">
-          <div className="bg-error-container/40 p-4 rounded-xl flex items-center gap-4 border-l-4 border-error">
+          <div className="bg-error-container/40 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 border-l-4 border-error">
             <span className="material-symbols-outlined text-error">warning</span>
             <p className="text-sm font-medium text-on-error-container">
               <strong>Sensor Interference:</strong> Optical scan partial failure. Results may be incomplete for some zones.
             </p>
-            <button onClick={onRescan} className="ml-auto text-error text-xs font-bold uppercase tracking-wider cursor-pointer hover:underline">Retry Zone</button>
+            <button onClick={onRefresh} className="sm:ml-auto w-full sm:w-auto text-error text-xs font-bold uppercase tracking-wider cursor-pointer hover:underline text-left sm:text-right">Refresh Data</button>
           </div>
         </section>
       )}
@@ -120,13 +129,13 @@ export default function ResultsScreen({
         {foodEvents.length > 0 ? (
           <div>
             <div className="flex items-center gap-4 mb-6">
-              <h2 className="text-2xl font-headline font-extrabold">Free Food Detected</h2>
+              <h2 className="text-xl sm:text-2xl font-headline font-extrabold">Free Food Detected</h2>
               <div className="h-[2px] flex-grow bg-surface-container-high"></div>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {foodEvents.map((event) => (
                 <div key={event.id} className="group flex flex-col md:flex-row bg-surface-container-lowest rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-surface-container-highest/30">
-                  <div className="w-full md:w-64 h-48 md:h-auto overflow-hidden bg-surface-container-low flex-shrink-0 relative">
+                  <div className="w-full md:w-64 h-44 sm:h-48 md:h-auto overflow-hidden bg-surface-container-low flex-shrink-0 relative">
                     {getEventImageSrc(event) ? (
                       <img className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500" src={getEventImageSrc(event)!} alt={event.name} />
                     ) : (
@@ -135,24 +144,27 @@ export default function ResultsScreen({
                       </div>
                     )}
                   </div>
-                  <div className="flex-grow p-8 flex flex-col justify-between">
+                  <div className="flex-grow p-5 sm:p-8 flex flex-col justify-between gap-4">
                     <div>
-                      <div className="flex justify-between items-start">
-                        <span className="bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block">High Certainty</span>
-                        <div className="text-right text-on-surface-variant font-headline font-bold text-sm">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                        <span className={`${getCertaintyTone(event.foodConfidence ?? 0)} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-2 w-fit`}>
+                          <span>{getCertaintyLabel(event.foodConfidence ?? 0)}</span>
+                          <span className="opacity-70 normal-case tracking-normal font-semibold">{formatConfidence(event.foodConfidence ?? 0)}</span>
+                        </span>
+                        <div className="text-left sm:text-right text-on-surface-variant font-headline font-bold text-sm">
                           {getEventDateLabel(event) && <div>{getEventDateLabel(event)}</div>}
                           {getEventTimeLabel(event) && <div>{getEventTimeLabel(event)}</div>}
                         </div>
                       </div>
-                      <h3 className="text-2xl font-headline font-bold text-on-surface group-hover:text-primary transition-colors">{event.name}</h3>
-                      <p className="mt-4 text-slate-600 line-clamp-2">{event.foodReasoning || 'Food confirmed by visual analysis.'}</p>
+                      <h3 className="text-xl sm:text-2xl font-headline font-bold text-on-surface group-hover:text-primary transition-colors">{event.name}</h3>
+                      <p className="mt-3 sm:mt-4 text-slate-600 line-clamp-2">{event.foodReasoning || 'Food confirmed by visual analysis.'}</p>
                     </div>
-                    <div className="mt-6 flex justify-end items-end">
+                    <div className="mt-2 flex justify-center sm:justify-end items-end">
                       <button
                         type="button"
                         onClick={() => openEvent(event.sourceUrl)}
                         disabled={!event.sourceUrl}
-                        className="inline-flex items-center gap-2 bg-surface-container-low hover:bg-surface-dim text-primary font-headline font-bold px-6 py-2 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-surface-container-low hover:bg-surface-dim text-primary font-headline font-bold px-6 py-3 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <span className="material-symbols-outlined text-[18px]">open_in_new</span>
                         Open on Ducklink
@@ -164,9 +176,9 @@ export default function ResultsScreen({
             </div>
           </div>
         ) : events.length > 0 && (
-          <div className="bg-surface-container-low rounded-2xl p-12 text-center">
+          <div className="bg-surface-container-low rounded-2xl p-8 sm:p-12 text-center">
             <span className="material-symbols-outlined text-6xl text-slate-300 mb-4 block">search_off</span>
-            <h3 className="text-2xl font-headline font-bold text-on-surface mb-2">No Free Food Detected</h3>
+            <h3 className="text-xl sm:text-2xl font-headline font-bold text-on-surface mb-2">No Free Food Detected</h3>
             <p className="text-on-surface-variant max-w-md mx-auto">
               We scanned {events.length} events, but none of them appear to have catering or free food based on our analysis.
             </p>
@@ -177,13 +189,13 @@ export default function ResultsScreen({
         {otherEvents.length > 0 && (
           <div>
             <div className="flex items-center gap-4 mb-6 opacity-60">
-              <h2 className="text-2xl font-headline font-extrabold">Other Campus Events</h2>
+              <h2 className="text-xl sm:text-2xl font-headline font-extrabold">Other Campus Events</h2>
               <div className="h-[2px] flex-grow bg-surface-container-high"></div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {otherEvents.map((event) => (
-                <div key={event.id} className="bg-surface-container-low hover:bg-surface-dim transition-colors p-6 rounded-2xl flex items-center gap-6">
-                  <div className="w-16 h-16 rounded-xl bg-surface-container-highest flex items-center justify-center text-slate-400 flex-shrink-0 overflow-hidden">
+                <div key={event.id} className="bg-surface-container-low hover:bg-surface-dim transition-colors p-5 sm:p-6 rounded-2xl flex items-center gap-4 sm:gap-6">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-surface-container-highest flex items-center justify-center text-slate-400 flex-shrink-0 overflow-hidden">
                     {getEventImageSrc(event) ? (
                       <img src={getEventImageSrc(event)!} alt={event.name} className="w-full h-full object-cover" />
                     ) : (
@@ -191,7 +203,7 @@ export default function ResultsScreen({
                     )}
                   </div>
                   <div className="flex-grow min-w-0">
-                    <h4 className="font-headline font-bold text-on-surface truncate">{event.name}</h4>
+                    <h4 className="font-headline font-bold text-on-surface truncate text-sm sm:text-base">{event.name}</h4>
                     <p className="text-xs text-on-surface-variant truncate">
                       {getEventDateLabel(event) || 'Date TBA'}
                     </p>
@@ -204,7 +216,7 @@ export default function ResultsScreen({
                     type="button"
                     onClick={() => openEvent(event.sourceUrl)}
                     disabled={!event.sourceUrl}
-                    className="inline-flex items-center gap-1 text-slate-400 hover:text-primary flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-1 text-slate-400 hover:text-primary flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="material-symbols-outlined">open_in_new</span>
                   </button>
@@ -216,17 +228,17 @@ export default function ResultsScreen({
 
         {/* No events at all */}
         {events.length === 0 && (
-          <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-center">
+          <div className="flex flex-col items-center justify-center min-h-[320px] sm:min-h-[400px] gap-4 text-center">
             <span className="material-symbols-outlined text-6xl text-slate-300 block">event_busy</span>
-            <h2 className="text-2xl font-headline font-bold text-on-surface">No Events Today</h2>
+            <h2 className="text-xl sm:text-2xl font-headline font-bold text-on-surface">No Events Today</h2>
             <p className="text-on-surface-variant max-w-sm">
               No events were found on Ducklink for today. Check back later or try rescanning.
             </p>
             <button
-              onClick={onRescan}
-              className="mt-4 px-6 py-3 bg-surface-container-highest hover:bg-surface-dim rounded-full text-sm font-bold transition-colors cursor-pointer"
+              onClick={onRefresh}
+              className="mt-4 w-full sm:w-auto px-6 py-3 bg-surface-container-highest hover:bg-surface-dim rounded-full text-sm font-bold transition-colors cursor-pointer"
             >
-              Rescan Campus
+              Refresh Data
             </button>
           </div>
         )}
@@ -283,14 +295,19 @@ function getEventTimeLabel(event: ScrapedEvent): string {
     return event.startTime
   }
 
-  const match = event.rawDateText.match(
-    /\b(\d{1,2}(?::\d{2})?\s*[AP]M)\s*[–-]\s*(\d{1,2}(?::\d{2})?\s*[AP]M)\b/i
-  )
+  const normalizedRawDateText = normalizeScheduleText(event.rawDateText)
+  const match = normalizedRawDateText.match(TIME_RANGE_REGEX)
 
   if (match) {
     return `${match[1].replace(/\s+/g, ' ').trim()} – ${match[2].replace(/\s+/g, ' ').trim()}`
   }
 
-  const single = event.rawDateText.match(/\b(\d{1,2}(?::\d{2})?\s*[AP]M)\b/i)
+  const single = normalizedRawDateText.match(SINGLE_TIME_REGEX)
   return single ? single[1].replace(/\s+/g, ' ').trim() : ''
+}
+
+function normalizeScheduleText(text: string): string {
+  return text
+    .replace(/\u00a0/g, ' ')
+    .replace(/(\b\d{4})(?=\d{1,2}(?::\d{2})?\s*[AP]M\b)/g, '$1 ')
 }

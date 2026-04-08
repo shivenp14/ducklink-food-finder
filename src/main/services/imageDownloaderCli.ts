@@ -50,7 +50,7 @@ export async function downloadImage(url: string, eventId: string): Promise<strin
     fs.writeFileSync(filepath, Buffer.from(response.data));
     console.log(`  Downloaded: ${filename}`);
     return filepath;
-  } catch (error) {
+  } catch {
     console.log(`  Failed to download: ${eventId}`);
     return null;
   }

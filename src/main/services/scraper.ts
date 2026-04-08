@@ -1,5 +1,6 @@
 import { Page } from 'playwright-core';
 import { logger } from '../utils/logger';
+import { getLocalDateKey } from '../../shared/date';
 
 const EVENT_LIST_SELECTOR = '#divAllItems li.list-group-item';
 const DETAIL_FETCH_CONCURRENCY = 3;
@@ -21,6 +22,7 @@ export interface ScrapedEvent {
   combinedText: string;
   hasFood: boolean;
   foodReasoning: string;
+  foodConfidence: number;
 }
 
 interface EventSchedule {
@@ -28,6 +30,25 @@ interface EventSchedule {
   startTime: string;
   endTime: string;
 }
+
+interface RawEvent {
+  id: string;
+  rsvpId: string;
+  rsvpUrl: string;
+  imgUrl: string;
+  text: string;
+}
+
+const TIME_VALUE_PATTERN = String.raw`(?<![:\d])\d{1,2}(?::\d{2})?\s*[AP]M`;
+const TIME_SUFFIX_PATTERN = String.raw`(?:\s+[A-Z]{2,5}(?:\s*\(GMT[+-]\d{1,2}\))?)?`;
+const TIME_RANGE_REGEX = new RegExp(
+  String.raw`\b(${TIME_VALUE_PATTERN})\s*[–-]\s*(${TIME_VALUE_PATTERN}${TIME_SUFFIX_PATTERN})\b`,
+  'i'
+);
+const SINGLE_TIME_REGEX = new RegExp(
+  String.raw`\b(${TIME_VALUE_PATTERN}${TIME_SUFFIX_PATTERN})\b`,
+  'gi'
+);
 
 function getDayOfWeek(date: Date): string {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -61,10 +82,16 @@ export async function scrapeEvents(page: Page): Promise<ScrapedEvent[]> {
   await scrollUntilTomorrowOrStable(page);
 
   // Get all event data from the page, but stop before the "Tomorrow" section.
-  const rawEvents = await page.evaluate(() => {
+  const rawEvents = (await page.evaluate(() => {
     const container = document.querySelector('#divAllItems');
     const items = Array.from(container?.querySelectorAll('li.list-group-item') ?? []);
-    const events: any[] = [];
+    const events: Array<{
+      id: string;
+      rsvpId: string;
+      rsvpUrl: string;
+      imgUrl: string;
+      text: string;
+    }> = [];
     const tomorrowMarker = Array.from(container?.querySelectorAll('*') ?? []).find((element) => {
       const text = (element.textContent || '').trim().toLowerCase();
       return text === 'tomorrow';
@@ -96,7 +123,7 @@ export async function scrapeEvents(page: Page): Promise<ScrapedEvent[]> {
     });
 
     return events;
-  });
+  })) as RawEvent[];
 
   logger.info(`Found ${rawEvents.length} raw event items`);
 
@@ -138,6 +165,7 @@ export async function scrapeEvents(page: Page): Promise<ScrapedEvent[]> {
       combinedText: '',
       hasFood: false,
       foodReasoning: '',
+      foodConfidence: 0,
     });
 
     // Don't limit - get all events for today
@@ -171,25 +199,13 @@ function extractLocation(text: string): string {
   return '';
 }
 
-function extractTime(text: string): string {
-  const rangeMatch = text.match(
-    /\b(\d{1,2}(?::\d{2})?\s*[AP]M)\s*[–-]\s*(\d{1,2}(?::\d{2})?\s*[AP]M)\b/i
-  );
-  if (rangeMatch) return normalizeTime(rangeMatch[1]);
-
-  const timeMatch = text.match(/\b(\d{1,2}(?::\d{2})?\s*[AP]M)\b/i);
-  return timeMatch ? normalizeTime(timeMatch[1]) : '';
-}
-
 function extractSchedule(text: string, fallbackDate: Date): EventSchedule {
-  const normalized = text.replace(/\u00a0/g, ' ');
+  const normalized = normalizeScheduleText(text);
   const dateMatches = Array.from(
     normalized.matchAll(/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\b/g)
   ).map((match) => match[0]);
 
-  const rangeMatch = normalized.match(
-    /\b(\d{1,2}(?::\d{2})?\s*[AP]M)\s*[–-]\s*(\d{1,2}(?::\d{2})?\s*[AP]M)\b/i
-  );
+  const rangeMatch = normalized.match(TIME_RANGE_REGEX);
 
   if (rangeMatch) {
     return {
@@ -200,7 +216,7 @@ function extractSchedule(text: string, fallbackDate: Date): EventSchedule {
   }
 
   const timeMatches = Array.from(
-    normalized.matchAll(/\b(\d{1,2}(?::\d{2})?\s*[AP]M)\b/gi)
+    normalized.matchAll(SINGLE_TIME_REGEX)
   ).map((match) => normalizeTime(match[1]));
 
   return {
@@ -221,17 +237,24 @@ function parseDateLabelToISO(label: string | undefined, fallbackDate: Date): str
   return formatDateISO(parsed);
 }
 
+function normalizeScheduleText(text: string): string {
+  return text
+    .replace(/\u00a0/g, ' ')
+    .replace(/(\b\d{4})(?=\d{1,2}(?::\d{2})?\s*[AP]M\b)/g, '$1 ');
+}
+
 function normalizeTime(value: string): string {
   const trimmed = value.trim().toUpperCase().replace(/\s+/g, ' ');
-  const match = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/);
+  const match = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)(.*)$/);
   if (!match) return trimmed;
 
-  const [, hour, minutes, period] = match;
-  return minutes ? `${hour}:${minutes} ${period}` : `${hour} ${period}`;
+  const [, hour, minutes, period, suffix] = match;
+  const normalizedTime = minutes ? `${hour}:${minutes} ${period}` : `${hour} ${period}`;
+  return `${normalizedTime}${suffix}`.trim();
 }
 
 function formatDateISO(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return getLocalDateKey(date);
 }
 
 async function scrollUntilTomorrowOrStable(page: Page): Promise<void> {

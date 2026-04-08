@@ -10,13 +10,14 @@ import {
   setScreenshotCallback,
 } from '../services/playwright';
 import { scrapeEvents, ScrapedEvent } from '../services/scraper';
-import { downloadAllImages, getImageDataUrl } from '../services/imageDownloader';
+import { downloadAllImages, getLocalImageDataUrl } from '../services/imageDownloader';
 import { processAllImages, combineTextForLLM } from '../services/ocr';
 import { detectFood, sortEventsByFood } from '../services/foodDetector';
-import { getApiKey, setApiKey, hasApiKey, deleteApiKey, loadApiKeyFromKeychain } from '../services/keytarStore';
+import { getApiKey, setApiKey, hasApiKey, deleteApiKey } from '../services/keytarStore';
 import { getCachedScan, saveCache, clearCache, getCacheInfo } from '../services/cache';
 import { retryWithBackoff } from '../utils/retry';
 import { logger } from '../utils/logger';
+import { getLocalDateKey } from '../../shared/date';
 
 type ScanStage = 'idle' | 'browser' | 'scraping' | 'ocr' | 'llm' | 'done' | 'error';
 
@@ -119,6 +120,19 @@ export function registerHandlers(window: BrowserWindow): void {
     return getCacheInfo();
   });
 
+  ipcMain.handle(IPC.CACHE_GET, () => {
+    const cached = getCachedScan();
+    if (!cached) return null;
+
+    return {
+      date: cached.date,
+      events: cached.events,
+      foodEvents: cached.foodEvents,
+      scanDuration: cached.scanDurationMs,
+      fromCache: true,
+    };
+  });
+
   ipcMain.handle(IPC.BROWSER_OPEN_EXTERNAL, (_event, url: string) => {
     if (!url) return;
     return shell.openExternal(url);
@@ -162,7 +176,7 @@ async function runScraping(): Promise<void> {
   const eventsWithImages: ScrapedEvent[] = events.map((e) => ({
     ...e,
     localImagePath: imagePaths.get(e.id) || null,
-    localImageDataUrl: imagePaths.get(e.id) ? getImageDataUrl(imagePaths.get(e.id)!) : null,
+    localImageDataUrl: getLocalImageDataUrl(imagePaths.get(e.id) || null),
   }));
 
   emitProgress('scraping', 'Scraping complete', 40);
@@ -234,7 +248,7 @@ function emitScanComplete(
   fromCache: boolean = false
 ): void {
   mainWindow?.webContents.send(IPC.SCAN_COMPLETE, {
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateKey(),
     events,
     foodEvents,
     scanDuration,

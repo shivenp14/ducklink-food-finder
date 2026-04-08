@@ -14,9 +14,9 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "postinstall": "electron-builder install-app-deps",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "dist:mac": "electron-builder --mac",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac",
     "cli": "npx tsx src/main/cli.ts",
     "bench": "npx tsx src/main/benchModels.ts"
   },
@@ -52,7 +52,9 @@
   "build": {
     "appId": "com.ducklink.food-finder",
     "productName": "Ducklink Food Finder",
+    "icon": "resources/icon.png",
     "mac": {
+      "icon": "resources/AppIcon.icns",
       "category": "public.app-category.utilities",
       "target": [
         "dmg"
@@ -76,7 +78,8 @@
       ]
     },
     "files": [
-      "out/**/*"
+      "out/**/*",
+      "resources/**/*"
     ]
   }
 }

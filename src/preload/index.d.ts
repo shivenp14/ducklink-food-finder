@@ -1,3 +1,5 @@
+import type { ScrapedEvent } from '../renderer/src/types';
+
 interface ScanProgress {
   stage: 'idle' | 'browser' | 'scraping' | 'ocr' | 'llm' | 'done';
   message: string;
@@ -13,8 +15,8 @@ interface ScanError {
 
 interface ScanResult {
   date: string;
-  events: unknown[];
-  foodEvents: unknown[];
+  events: ScrapedEvent[];
+  foodEvents: ScrapedEvent[];
   scanDuration: number;
   fromCache: boolean;
 }
@@ -34,6 +36,7 @@ interface WindowApi {
   deleteApiKey: () => Promise<void>;
   clearCache: () => Promise<void>;
   getCacheInfo: () => Promise<CacheInfo | null>;
+  getCachedScan: () => Promise<ScanResult | null>;
   onScanProgress: (cb: (data: ScanProgress) => void) => void;
   onScanComplete: (cb: (data: ScanResult) => void) => void;
   onScanError: (cb: (data: ScanError) => void) => void;

@@ -21,6 +21,7 @@ export const IPC = {
   // Cache
   CACHE_CLEAR: 'cache:clear',
   CACHE_INFO: 'cache:info',
+  CACHE_GET: 'cache:get',
 
   // Browser
   BROWSER_URL_CHANGED: 'browser:urlChanged',

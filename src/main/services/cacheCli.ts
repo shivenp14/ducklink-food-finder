@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { getLocalDateKey } from '../../shared/date';
 
 interface CacheData {
   date: string;
@@ -10,6 +11,11 @@ interface CacheData {
   scanDurationMs: number;
 }
 
+interface CachedEventWithImage {
+  localImagePath?: string | null;
+  localImageDataUrl?: string | null;
+}
+
 const CACHE_DIR = path.join(os.homedir(), '.ducklink-food-finder');
 const CACHE_PATH = path.join(CACHE_DIR, 'cache.json');
 
@@ -17,10 +23,40 @@ function loadCache(): CacheData | null {
   try {
     if (!fs.existsSync(CACHE_PATH)) return null;
     const data = fs.readFileSync(CACHE_PATH, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data) as CacheData;
+    return {
+      ...parsed,
+      events: sanitizeCachedEvents(parsed.events),
+      foodEvents: sanitizeCachedEvents(parsed.foodEvents),
+    };
   } catch {
     return null;
   }
+}
+
+function sanitizeCachedEvents(events: unknown[]): unknown[] {
+  return events.map((event) => sanitizeCachedEvent(event));
+}
+
+function sanitizeCachedEvent(event: unknown): unknown {
+  if (!event || typeof event !== 'object') {
+    return event;
+  }
+
+  const cachedEvent = event as CachedEventWithImage;
+  if (!cachedEvent.localImagePath) {
+    return event;
+  }
+
+  if (fs.existsSync(cachedEvent.localImagePath)) {
+    return event;
+  }
+
+  return {
+    ...event,
+    localImagePath: null,
+    localImageDataUrl: null,
+  };
 }
 
 function saveCacheToFile(data: CacheData): void {
@@ -34,7 +70,7 @@ export function getCachedScan(): CacheData | null {
   const cached = loadCache();
   if (!cached) return null;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateKey();
   if (cached.date !== today) {
     console.log(`Cache expired: cached=${cached.date}, today=${today}`);
     clearCache();
@@ -50,7 +86,7 @@ export function saveCache(
   foodEvents: unknown[],
   scanDurationMs: number
 ): void {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateKey();
 
   const data: CacheData = {
     date: today,

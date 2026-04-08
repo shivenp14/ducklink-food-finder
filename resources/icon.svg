@@ -1,0 +1,31 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="132" y1="120" x2="892" y2="904" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B4473B"/>
+      <stop offset="1" stop-color="#A63C32"/>
+    </linearGradient>
+    <filter id="softShadow" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dx="0" dy="20"/>
+      <feGaussianBlur stdDeviation="24"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.36 0 0 0 0 0.12 0 0 0 0 0.09 0 0 0 0.28 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+
+  <g filter="url(#softShadow)">
+    <circle cx="512" cy="560" r="245" fill="white"/>
+    <circle cx="512" cy="560" r="165" fill="url(#bg)"/>
+    <circle cx="512" cy="560" r="126" fill="white"/>
+  </g>
+
+  <g filter="url(#softShadow)" fill="white">
+    <path d="M234 338C230.686 338 228 340.686 228 344V435C228 456.347 244.579 474.305 266 476.608V738C266 754.569 279.431 768 296 768C312.569 768 326 754.569 326 738V476.608C347.421 474.305 364 456.347 364 435V344C364 340.686 361.314 338 358 338C354.686 338 352 340.686 352 344V435C352 443.837 344.837 451 336 451V344C336 340.686 333.314 338 330 338C326.686 338 324 340.686 324 344V451H308V344C308 340.686 305.314 338 302 338C298.686 338 296 340.686 296 344V451H280V344C280 340.686 277.314 338 274 338C270.686 338 268 340.686 268 344V451C259.163 451 252 443.837 252 435V344C252 340.686 249.314 338 246 338H234Z"/>
+    <path d="M782 338C759.909 338 742 355.909 742 378V471C742 493.091 759.909 511 782 511V738C782 754.569 795.431 768 812 768C828.569 768 842 754.569 842 738V378C842 355.909 824.091 338 802 338H782Z"/>
+  </g>
+</svg>

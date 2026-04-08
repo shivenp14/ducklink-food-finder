@@ -1,10 +1,9 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright-core';
-import { logger } from './utils/logger';
 import { scrapeEvents, ScrapedEvent } from './services/scraper';
 import { downloadAllImagesCli } from './services/imageDownloaderCli';
 import { processAllImages, combineTextForLLM } from './services/ocr';
 import { detectFood, sortEventsByFood } from './services/foodDetector';
-import { getApiKey, hasApiKey, loadApiKeyFromKeychain } from './services/keytarStore';
+import { hasApiKey, loadApiKeyFromKeychain } from './services/keytarStore';
 import { saveCache } from './services/cacheCli';
 
 const DUCKLINK_EVENTS = 'https://ducklink.stevens.edu/events';
@@ -85,7 +84,7 @@ async function closeBrowser(): Promise<void> {
 
 function getChromiumPath(): string {
   try {
-    return require('playwright-core').chromium.executablePath();
+    return chromium.executablePath();
   } catch {
     return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
   }

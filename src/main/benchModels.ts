@@ -1,6 +1,5 @@
 import OpenAI from 'openai';
 import { getApiKey, loadApiKeyFromKeychain } from './services/keytarStore';
-import { logger } from './utils/logger';
 
 const NVIDIA_API_BASE = 'https://integrate.api.nvidia.com/v1';
 
@@ -152,7 +151,6 @@ async function main() {
   for (const r of results) {
     const modelShort = r.model.split('/')[1] || r.model;
     const status = r.success ? '✓' : '✗';
-    const timeStr = r.success ? r.time.toString() : r.error || 'failed';
     console.log(`${modelShort.padEnd(50)}${r.time.toString().padEnd(12)}${status}`);
   }
 

@@ -9,6 +9,7 @@ interface Props {
 
 export default function EventCard({ event, showFoodBadge = false }: Props) {
   const [expanded, setExpanded] = useState(false)
+  const imageSrc = getEventImageSrc(event)
 
   return (
     <div
@@ -21,9 +22,9 @@ export default function EventCard({ event, showFoodBadge = false }: Props) {
     >
       <div className="p-4">
         <div className="flex gap-4">
-          {event.imageUrl ? (
+          {imageSrc ? (
             <img
-              src={event.imageUrl}
+              src={imageSrc}
               alt={event.name}
               className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
               onError={(e) => {
@@ -41,7 +42,7 @@ export default function EventCard({ event, showFoodBadge = false }: Props) {
               <h3 className="font-semibold text-lg leading-tight truncate">
                 {event.name}
               </h3>
-              {showFoodBadge && <FoodBadge size="sm" />}
+              {showFoodBadge && <FoodBadge size="sm" confidence={event.foodConfidence ?? 0} />}
             </div>
 
             <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
@@ -120,6 +121,18 @@ export default function EventCard({ event, showFoodBadge = false }: Props) {
       </div>
     </div>
   )
+}
+
+function getEventImageSrc(event: ScrapedEvent): string | null {
+  if (event.localImageDataUrl) {
+    return event.localImageDataUrl
+  }
+
+  if (event.localImagePath) {
+    return encodeURI(`file://${event.localImagePath.replace(/\\/g, '/')}`)
+  }
+
+  return event.imageUrl
 }
 
 function ClockIcon() {

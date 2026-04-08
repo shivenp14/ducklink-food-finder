@@ -13,6 +13,7 @@ const CONCURRENT_BATCHES = 3;
 interface FoodFields {
   hasFood: boolean;
   foodReasoning: string;
+  foodConfidence: number;
 }
 
 export async function detectFood<T extends { id: string; name: string; description: string; ocrText: string }>(
@@ -21,7 +22,7 @@ export async function detectFood<T extends { id: string; name: string; descripti
 ): Promise<(T & FoodFields)[]> {
   if (events.length === 0) {
     logger.info('No events to classify');
-    return events.map((e) => ({ ...e, hasFood: false, foodReasoning: '' }));
+    return events.map((e) => ({ ...e, hasFood: false, foodReasoning: '', foodConfidence: 0 }));
   }
 
   const batches = chunkEvents(events, BATCH_SIZE);
@@ -43,6 +44,7 @@ export async function detectFood<T extends { id: string; name: string; descripti
         ...batch[r.index],
         hasFood: r.hasFood,
         foodReasoning: r.reasoning,
+        foodConfidence: r.confidence,
       }));
     } catch (error) {
       logger.error(`LLM batch ${batchIndex + 1} failed after retries: ${(error as Error).message}`);
@@ -50,6 +52,7 @@ export async function detectFood<T extends { id: string; name: string; descripti
         ...event,
         hasFood: false,
         foodReasoning: 'Food detection failed for this batch',
+        foodConfidence: 0,
       }));
     }
   };

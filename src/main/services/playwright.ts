@@ -1,5 +1,6 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright-core';
 import path from 'path';
+import { existsSync } from 'fs';
 import { app } from 'electron';
 import { logger } from '../utils/logger';
 
@@ -121,13 +122,17 @@ export function setScreenshotCallback(callback: (dataUrl: string) => void): void
 }
 
 function getChromiumPath(): string {
+  const bundledPath = path.join(process.resourcesPath, 'chromium', 'chromium');
+
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'chromium', 'chromium');
+    if (existsSync(bundledPath)) {
+      return bundledPath;
+    }
+
+    logger.warn(`Bundled Chromium not found at ${bundledPath}, falling back to Playwright browser cache`);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const playwright = require('playwright-core');
-  return playwright.chromium.executablePath();
+  return chromium.executablePath();
 }
 
 function attachPageListeners(): void {

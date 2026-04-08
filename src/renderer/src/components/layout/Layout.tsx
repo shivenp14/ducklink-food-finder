@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -7,55 +7,95 @@ interface LayoutProps {
 }
 
 export default function Layout({ children, currentScreen, onNavigate }: LayoutProps) {
+  const scrollRef = useRef<HTMLElement | null>(null)
+  const hideTimerRef = useRef<number | null>(null)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const [thumbHeight, setThumbHeight] = useState(0)
+  const [thumbTop, setThumbTop] = useState(0)
+  const [hasOverflow, setHasOverflow] = useState(false)
+
+  const updateScrollbar = () => {
+    const node = scrollRef.current
+    if (!node) return
+
+    const { clientHeight, scrollHeight, scrollTop } = node
+    const overflow = scrollHeight > clientHeight + 1
+    setHasOverflow(overflow)
+
+    if (!overflow) {
+      setThumbHeight(0)
+      setThumbTop(0)
+      return
+    }
+
+    const nextThumbHeight = Math.max(40, (clientHeight * clientHeight) / scrollHeight)
+    const maxThumbTop = clientHeight - nextThumbHeight
+    const maxScrollTop = scrollHeight - clientHeight
+    const nextThumbTop = maxScrollTop > 0 ? (scrollTop / maxScrollTop) * maxThumbTop : 0
+
+    setThumbHeight(nextThumbHeight)
+    setThumbTop(nextThumbTop)
+  }
+
+  useEffect(() => {
+    const node = scrollRef.current
+    if (!node) return
+
+    const handleScroll = () => {
+      updateScrollbar()
+      setIsScrolling(true)
+
+      if (hideTimerRef.current !== null) {
+        window.clearTimeout(hideTimerRef.current)
+      }
+
+      hideTimerRef.current = window.setTimeout(() => {
+        setIsScrolling(false)
+      }, 700)
+    }
+
+    updateScrollbar()
+    node.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', updateScrollbar)
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollbar()
+    })
+    resizeObserver.observe(node)
+
+    return () => {
+      node.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', updateScrollbar)
+      resizeObserver.disconnect()
+      if (hideTimerRef.current !== null) {
+        window.clearTimeout(hideTimerRef.current)
+      }
+    }
+  }, [])
+
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen">
-      {/* Side Navigation Bar */}
-      <aside className="hidden lg:flex flex-col h-screen w-64 fixed left-0 top-0 py-6 px-4 bg-slate-50 dark:bg-slate-950 z-40">
-        <div className="mb-8 px-2">
-          <h2 className="font-headline font-extrabold text-red-900 text-lg leading-tight">Academic Concierge</h2>
-          <p className="text-xs text-on-surface-variant font-medium">Stevens Institute</p>
-        </div>
-        <div className="flex flex-col gap-1 grow">
-          <button 
-            className={`flex items-center gap-3 px-4 py-3 font-bold transition-all duration-200 ease-in-out text-left rounded-lg ${currentScreen === 'home' || currentScreen === 'scanning' ? 'text-red-800 border-r-4 border-red-800 bg-red-50/50' : 'text-slate-600 hover:bg-slate-200'}`}
-            onClick={() => onNavigate('home')}
-          >
-            <span className="material-symbols-outlined">radar</span>
-            <span className="text-sm">Live Feed</span>
-          </button>
-        </div>
-        <div className="mt-auto flex flex-col gap-1 pt-6 border-t border-surface-container">
-          <button 
-            className={`flex items-center gap-3 px-4 py-2 transition-colors text-sm rounded-lg ${currentScreen === 'settings' ? 'text-red-800 font-bold bg-red-50/50' : 'text-slate-600 hover:bg-slate-200'}`}
-            onClick={() => onNavigate('settings')}
-          >
-            <span className="material-symbols-outlined text-sm">settings</span>
-            <span>Settings</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content Canvas */}
-      <main className="lg:ml-64 pt-12 pb-24 lg:pb-12 px-6 md:px-12 lg:px-20 min-h-screen bg-surface">
-        {children}
-      </main>
-
-      {/* Mobile Bottom Nav */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 py-2 px-4 flex justify-around items-center z-50">
-        <button 
-          className={`flex flex-col items-center gap-1 ${currentScreen === 'home' || currentScreen === 'scanning' ? 'text-red-800' : 'text-slate-500'}`}
-          onClick={() => onNavigate('home')}
+    <div className="app-shell relative h-screen overflow-hidden bg-surface font-body text-on-surface">
+      <div className="app-drag-region absolute top-0 left-0 right-0 z-10 h-8" />
+      <div className="absolute inset-x-0 bottom-3 top-8">
+        <main
+          ref={scrollRef}
+          className="app-scrollbar h-full overflow-y-auto bg-surface px-6 pt-8 pb-8 md:px-12 lg:px-20"
         >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: currentScreen === 'home' || currentScreen === 'scanning' ? "'FILL' 1" : "'FILL' 0" }}>radar</span>
-          <span className="text-[10px] font-bold">Feed</span>
-        </button>
-        <button 
-          className={`flex flex-col items-center gap-1 ${currentScreen === 'settings' ? 'text-red-800' : 'text-slate-500'}`}
-          onClick={() => onNavigate('settings')}
-        >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: currentScreen === 'settings' ? "'FILL' 1" : "'FILL' 0" }}>settings</span>
-          <span className="text-[10px] font-medium">Settings</span>
-        </button>
+          {children}
+        </main>
+        {hasOverflow && (
+          <div className="pointer-events-none absolute bottom-2 right-1 top-2 w-3">
+            <div
+              className="absolute right-0 w-3 rounded-full border-3 border-surface transition-opacity duration-200"
+              style={{
+                top: `${thumbTop}px`,
+                height: `${thumbHeight}px`,
+                opacity: isScrolling ? 1 : 0,
+                background: '#e9b7bf',
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

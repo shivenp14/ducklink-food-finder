@@ -35,7 +35,15 @@ NEGATIVE indicators (NOT food, even if FREE is present):
 - "FREE membership", "FREE entry"
 - Any event where FREE refers to cost of attendance, not food
 
-Be strict. If uncertain, default to hasFood=false.`;
+Be strict. If uncertain, default to hasFood=false.
+
+Return a confidence score from 0.0 to 1.0 for each result:
+- 0.9 to 1.0 = very strong evidence
+- 0.7 to 0.89 = strong evidence
+- 0.4 to 0.69 = mixed or weak evidence
+- 0.0 to 0.39 = little to no evidence
+
+If hasFood=false, confidence should still reflect how sure you are that food is absent.`;
 
 export interface LLMBatchInput {
   index: number;
@@ -48,6 +56,7 @@ export interface LLMResult {
   index: number;
   hasFood: boolean;
   reasoning: string;
+  confidence: number;
 }
 
 export async function classifyBatch(events: LLMBatchInput[]): Promise<LLMResult[]> {
@@ -61,7 +70,7 @@ export async function classifyBatch(events: LLMBatchInput[]): Promise<LLMResult[
       { role: 'system', content: SYSTEM_PROMPT },
       {
         role: 'user',
-        content: `Classify each event for free food availability.\n\nInput:\n${JSON.stringify(payload, null, 2)}\n\nRespond with JSON in this exact format:\n{"results": [{"index": <number>, "hasFood": <boolean>, "reasoning": "<string>"}]}`,
+        content: `Classify each event for free food availability.\n\nInput:\n${JSON.stringify(payload, null, 2)}\n\nRespond with JSON in this exact format:\n{"results": [{"index": <number>, "hasFood": <boolean>, "reasoning": "<string>", "confidence": <number>}]}`,
       },
     ],
     temperature: 0.1,
@@ -109,11 +118,15 @@ function parseAndValidateLLMResponse(raw: string, batchSize: number): LLMResult[
     if (typeof r.hasFood !== 'boolean') {
       throw new Error(`LLM result at index ${r.index} missing "hasFood" boolean`);
     }
+    if (typeof r.confidence !== 'number' || Number.isNaN(r.confidence) || r.confidence < 0 || r.confidence > 1) {
+      throw new Error(`LLM result at index ${r.index} missing valid "confidence" number`);
+    }
 
     results.push({
       index: r.index,
       hasFood: r.hasFood,
       reasoning: typeof r.reasoning === 'string' ? r.reasoning : '',
+      confidence: r.confidence,
     });
   }
 

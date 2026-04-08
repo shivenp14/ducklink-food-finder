@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
 import { logger } from '../utils/logger';
+import { getLocalDateKey } from '../../shared/date';
 
 interface CacheData {
   date: string;
@@ -9,6 +10,11 @@ interface CacheData {
   events: unknown[];
   foodEvents: unknown[];
   scanDurationMs: number;
+}
+
+interface CachedEventWithImage {
+  localImagePath?: string | null;
+  localImageDataUrl?: string | null;
 }
 
 const getCachePath = (): string => {
@@ -20,10 +26,47 @@ function loadCache(): CacheData | null {
     const filePath = getCachePath();
     if (!fs.existsSync(filePath)) return null;
     const data = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data) as CacheData;
+    return {
+      ...parsed,
+      events: sanitizeCachedEvents(parsed.events),
+      foodEvents: sanitizeCachedEvents(parsed.foodEvents),
+    };
   } catch {
     return null;
   }
+}
+
+function sanitizeCachedEvents(events: unknown[]): unknown[] {
+  return events.map((event) => sanitizeCachedEvent(event));
+}
+
+function sanitizeCachedEvent(event: unknown): unknown {
+  if (!event || typeof event !== 'object') {
+    return event;
+  }
+
+  const cachedEvent = event as CachedEventWithImage;
+  if (!cachedEvent.localImagePath) {
+    return event;
+  }
+
+  if (fs.existsSync(cachedEvent.localImagePath)) {
+    return event;
+  }
+
+  if (cachedEvent.localImageDataUrl) {
+    return {
+      ...event,
+      localImagePath: null,
+    };
+  }
+
+  return {
+    ...event,
+    localImagePath: null,
+    localImageDataUrl: null,
+  };
 }
 
 function saveCacheToFile(data: CacheData): void {
@@ -39,7 +82,7 @@ export function getCachedScan(): CacheData | null {
   const cached = loadCache();
   if (!cached) return null;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateKey();
   if (cached.date !== today) {
     logger.info(`Cache expired: cached=${cached.date}, today=${today}`);
     clearCache();
@@ -55,7 +98,7 @@ export function saveCache(
   foodEvents: unknown[],
   scanDurationMs: number
 ): void {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateKey();
 
   const data: CacheData = {
     date: today,

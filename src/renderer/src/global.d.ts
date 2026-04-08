@@ -1,3 +1,5 @@
+import type { ScrapedEvent } from './types';
+
 export {};
 
 interface ScanProgress {
@@ -15,8 +17,8 @@ interface ScanError {
 
 interface ScanResult {
   date: string;
-  events: unknown[];
-  foodEvents: unknown[];
+  events: ScrapedEvent[];
+  foodEvents: ScrapedEvent[];
   scanDuration: number;
   fromCache: boolean;
 }
@@ -36,6 +38,7 @@ interface WindowApi {
   deleteApiKey: () => Promise<void>;
   clearCache: () => Promise<void>;
   getCacheInfo: () => Promise<CacheInfo | null>;
+  getCachedScan: () => Promise<ScanResult | null>;
   openExternal: (url: string) => Promise<void>;
   onScanProgress: (cb: (data: ScanProgress) => void) => void;
   onScanComplete: (cb: (data: ScanResult) => void) => void;
