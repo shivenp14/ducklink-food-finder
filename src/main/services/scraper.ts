@@ -346,13 +346,58 @@ async function fetchEventDetails(page: Page, event: ScrapedEvent): Promise<Scrap
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     const details = await page.evaluate(() => {
+      const clean = (value: string | null | undefined): string =>
+        (value || '')
+          .replace(/\s+/g, ' ')
+          .replace(/\u00a0/g, ' ')
+          .trim();
+
+      const unique = (values: Array<string | null | undefined>): string[] => {
+        const seen = new Set<string>();
+        const result: string[] = [];
+
+        for (const value of values) {
+          const cleaned = clean(value);
+          if (!cleaned) continue;
+          const key = cleaned.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          result.push(cleaned);
+        }
+
+        return result;
+      };
+
       const metaDesc = document.querySelector('meta[name="description"]');
-      const description = metaDesc ? metaDesc.getAttribute('content') || '' : '';
+      const description = clean(metaDesc ? metaDesc.getAttribute('content') || '' : '');
       const ogImage = document.querySelector('meta[property="og:image"]');
       const imageUrl = ogImage ? ogImage.getAttribute('content') || '' : '';
-      const title = document.title.replace(/ - .*$/, '').trim();
+      const titleHeading = clean(document.querySelector('.rsvp__event-name')?.textContent);
+      const title = titleHeading || clean(document.title.replace(/ - .*$/, ''));
 
-      return { description, imageUrl, title };
+      const cardBlocks = Array.from(document.querySelectorAll('.card-block'));
+      const detailsBlock = cardBlocks.find((block) => block.querySelector('.mdi-note-text'));
+      const foodBlock = detailsBlock
+        ? Array.from(detailsBlock.querySelectorAll('div'))
+            .find((node) => /food provided/i.test(node.textContent || ''))
+        : null;
+
+      const detailsText = clean(detailsBlock?.textContent);
+      const foodText = clean(foodBlock?.textContent);
+      const flyerAltTexts = unique(
+        Array.from(document.querySelectorAll('img'))
+          .map((img) => img.getAttribute('alt'))
+          .filter((alt) => alt && /flyer/i.test(alt))
+      );
+
+      const mergedDescription = unique([
+        description,
+        detailsText,
+        foodText,
+        ...flyerAltTexts,
+      ]).join('\n');
+
+      return { description: mergedDescription, imageUrl, title };
     });
 
     return {

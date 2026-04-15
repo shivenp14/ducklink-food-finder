@@ -1,11 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { createWorker, Worker } from 'tesseract.js';
+import { nativeImage } from 'electron';
+import { createWorker, PSM, Worker } from 'tesseract.js';
 import { logger } from '../utils/logger';
 
 const OCR_WORKER_COUNT = 2;
 const OCR_CACHE_DIR = path.join(process.env.TEMP || '/tmp', 'ducklink-food-finder-images', 'ocr-cache');
+const OCR_VARIANTS_DIR = path.join(OCR_CACHE_DIR, 'variants');
+const UPSCALE_TARGET_WIDTH = 2400;
+const OCR_CACHE_VERSION = 'v2';
 
 let workers: Worker[] = [];
 let workerInitPromise: Promise<Worker[]> | null = null;
@@ -13,6 +17,10 @@ let workerInitPromise: Promise<Worker[]> | null = null;
 function ensureOcrCacheDir(): void {
   if (!fs.existsSync(OCR_CACHE_DIR)) {
     fs.mkdirSync(OCR_CACHE_DIR, { recursive: true });
+  }
+
+  if (!fs.existsSync(OCR_VARIANTS_DIR)) {
+    fs.mkdirSync(OCR_VARIANTS_DIR, { recursive: true });
   }
 }
 
@@ -52,7 +60,7 @@ function getImageHash(imagePath: string): string | null {
 }
 
 function getOcrCachePath(imageHash: string): string {
-  return path.join(OCR_CACHE_DIR, `${imageHash}.txt`);
+  return path.join(OCR_CACHE_DIR, `${OCR_CACHE_VERSION}-${imageHash}.txt`);
 }
 
 function readCachedText(imagePath: string): string | null {
@@ -92,10 +100,25 @@ export async function recognizeText(imagePath: string, worker: Worker): Promise<
   if (cached !== null) return cached;
 
   try {
-    const { data } = await worker.recognize(imagePath);
-    const cleaned = postProcess(data.text);
+    const variants = createRecognitionVariants(imagePath);
+    const passes: string[] = [];
+
+    for (const variant of variants) {
+      await worker.setParameters({
+        tessedit_pageseg_mode: variant.psm,
+        preserve_interword_spaces: '1',
+      });
+
+      const { data } = await worker.recognize(variant.path);
+      const cleaned = postProcess(data.text);
+      if (cleaned) {
+        passes.push(cleaned);
+      }
+    }
+
+    const cleaned = mergeRecognizedText(passes);
     writeCachedText(imagePath, cleaned);
-    logger.debug(`OCR result for ${imagePath}: ${cleaned.length} chars`);
+    logger.debug(`OCR result for ${imagePath}: ${cleaned.length} chars across ${variants.length} pass(es)`);
     return cleaned;
   } catch (error) {
     logger.warn(`OCR failed for ${imagePath}: ${(error as Error).message}`);
@@ -117,9 +140,10 @@ export async function terminateWorker(): Promise<void> {
 
 function postProcess(rawText: string): string {
   return rawText
-    .replace(/\s+/g, ' ')
-    .replace(/[^\x20-\x7E]/g, '')
-    .trim();
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').replace(/[^\x20-\x7E]/g, '').trim())
+    .filter((line) => line.length > 1)
+    .join('\n');
 }
 
 export interface EventWithOCR {
@@ -182,10 +206,108 @@ export function clearOcrCache(): void {
 
   for (const entry of fs.readdirSync(OCR_CACHE_DIR)) {
     const entryPath = path.join(OCR_CACHE_DIR, entry);
-    if (fs.statSync(entryPath).isFile()) {
+    const stats = fs.statSync(entryPath);
+    if (stats.isDirectory()) {
+      fs.rmSync(entryPath, { recursive: true, force: true });
+      continue;
+    }
+
+    if (stats.isFile()) {
       fs.unlinkSync(entryPath);
     }
   }
+}
+
+interface RecognitionVariant {
+  path: string;
+  label: string;
+  psm: PSM;
+}
+
+function createRecognitionVariants(imagePath: string): RecognitionVariant[] {
+  ensureOcrCacheDir();
+
+  const variants: RecognitionVariant[] = [
+    {
+      path: imagePath,
+      label: 'base-single-block',
+      psm: PSM.SINGLE_BLOCK,
+    },
+    {
+      path: imagePath,
+      label: 'base-sparse-text',
+      psm: PSM.SPARSE_TEXT,
+    },
+  ];
+
+  const upscaledPath = createUpscaledVariant(imagePath);
+  if (upscaledPath) {
+    variants.push({
+      path: upscaledPath,
+      label: 'upscaled-sparse-text',
+      psm: PSM.SPARSE_TEXT,
+    });
+  }
+
+  return variants;
+}
+
+function createUpscaledVariant(imagePath: string): string | null {
+  const imageHash = getImageHash(imagePath);
+  if (!imageHash) return null;
+
+  const variantPath = path.join(OCR_VARIANTS_DIR, `${imageHash}-upscaled.png`);
+  if (fs.existsSync(variantPath)) {
+    return variantPath;
+  }
+
+  try {
+    const image = nativeImage.createFromPath(imagePath);
+    if (image.isEmpty()) {
+      return null;
+    }
+
+    const { width, height } = image.getSize();
+    if (!width || !height) {
+      return null;
+    }
+
+    if (width >= UPSCALE_TARGET_WIDTH) {
+      return imagePath;
+    }
+
+    const resized = image.resize({
+      width: UPSCALE_TARGET_WIDTH,
+      height: Math.round((height / width) * UPSCALE_TARGET_WIDTH),
+      quality: 'best',
+    });
+
+    fs.writeFileSync(variantPath, resized.toPNG());
+    return variantPath;
+  } catch (error) {
+    logger.warn(`Failed to create OCR upscale variant for ${imagePath}: ${(error as Error).message}`);
+    return null;
+  }
+}
+
+function mergeRecognizedText(texts: string[]): string {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+
+  for (const text of texts) {
+    for (const line of text.split('\n')) {
+      const cleaned = line.trim();
+      if (!cleaned) continue;
+
+      const key = cleaned.toLowerCase();
+      if (seen.has(key)) continue;
+
+      seen.add(key);
+      merged.push(cleaned);
+    }
+  }
+
+  return merged.join('\n');
 }
 
 export function combineTextForLLM(
