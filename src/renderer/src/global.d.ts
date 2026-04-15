@@ -1,4 +1,4 @@
-import type { ScrapedEvent } from './types';
+import type { AppInfo, ScrapedEvent, UpdateState } from './types';
 
 export {};
 
@@ -39,12 +39,18 @@ interface WindowApi {
   clearCache: () => Promise<void>;
   getCacheInfo: () => Promise<CacheInfo | null>;
   getCachedScan: () => Promise<ScanResult | null>;
+  getAppInfo: () => Promise<AppInfo>;
+  getUpdateState: () => Promise<UpdateState>;
+  checkForUpdates: () => Promise<UpdateState>;
+  downloadUpdate: () => Promise<UpdateState>;
+  installUpdate: () => Promise<void>;
   openExternal: (url: string) => Promise<void>;
-  onScanProgress: (cb: (data: ScanProgress) => void) => void;
-  onScanComplete: (cb: (data: ScanResult) => void) => void;
-  onScanError: (cb: (data: ScanError) => void) => void;
-  onBrowserUrlChanged: (cb: (url: string) => void) => void;
-  onBrowserPreviewUpdated: (cb: (dataUrl: string) => void) => void;
+  onScanProgress: (cb: (data: ScanProgress) => void) => () => void;
+  onScanComplete: (cb: (data: ScanResult) => void) => () => void;
+  onScanError: (cb: (data: ScanError) => void) => () => void;
+  onBrowserUrlChanged: (cb: (url: string) => void) => () => void;
+  onBrowserPreviewUpdated: (cb: (dataUrl: string) => void) => () => void;
+  onUpdateStateChanged: (cb: (data: UpdateState) => void) => () => void;
 }
 
 declare global {

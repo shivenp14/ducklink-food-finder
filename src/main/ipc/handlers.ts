@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, shell } from 'electron';
+import { ipcMain, BrowserWindow, shell, app } from 'electron';
 import { IPC } from './channels';
 import {
   launchBrowser,
@@ -18,6 +18,14 @@ import { getCachedScan, saveCache, clearCache, getCacheInfo } from '../services/
 import { retryWithBackoff } from '../utils/retry';
 import { logger } from '../utils/logger';
 import { getLocalDateKey } from '../../shared/date';
+import {
+  getUpdateState,
+  initializeUpdater,
+  checkForUpdates,
+  downloadUpdate,
+  quitAndInstallUpdate,
+  isUpdateConfigured,
+} from '../services/updater';
 
 type ScanStage = 'idle' | 'browser' | 'scraping' | 'ocr' | 'llm' | 'done' | 'error';
 
@@ -27,6 +35,7 @@ let scanStartTime = 0;
 
 export function registerHandlers(window: BrowserWindow): void {
   mainWindow = window;
+  initializeUpdater(window);
 
   setUrlChangeCallback((url: string) => {
     mainWindow?.webContents.send(IPC.BROWSER_URL_CHANGED, url);
@@ -131,6 +140,33 @@ export function registerHandlers(window: BrowserWindow): void {
       scanDuration: cached.scanDurationMs,
       fromCache: true,
     };
+  });
+
+  ipcMain.handle(IPC.APP_INFO, () => {
+    return {
+      version: app.getVersion(),
+      platform: process.platform,
+      isPackaged: app.isPackaged,
+      updatesEnabled: isUpdateConfigured(),
+    };
+  });
+
+  ipcMain.handle(IPC.UPDATE_GET_STATE, () => {
+    return getUpdateState();
+  });
+
+  ipcMain.handle(IPC.UPDATE_CHECK, async () => {
+    await checkForUpdates();
+    return getUpdateState();
+  });
+
+  ipcMain.handle(IPC.UPDATE_DOWNLOAD, async () => {
+    await downloadUpdate();
+    return getUpdateState();
+  });
+
+  ipcMain.handle(IPC.UPDATE_INSTALL, () => {
+    quitAndInstallUpdate();
   });
 
   ipcMain.handle(IPC.BROWSER_OPEN_EXTERNAL, (_event, url: string) => {

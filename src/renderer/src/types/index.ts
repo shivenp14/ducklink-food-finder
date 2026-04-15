@@ -44,3 +44,24 @@ export interface CacheInfo {
   eventCount: number
   timestamp: number
 }
+
+export interface AppInfo {
+  version: string
+  platform: string
+  isPackaged: boolean
+  updatesEnabled: boolean
+}
+
+export interface UpdateState {
+  enabled: boolean
+  status: 'disabled' | 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error'
+  currentVersion: string
+  availableVersion: string | null
+  downloadedVersion: string | null
+  progress: number | null
+  transferredBytes: number | null
+  totalBytes: number | null
+  message: string
+  releaseDate: string | null
+  lastCheckedAt: number | null
+}

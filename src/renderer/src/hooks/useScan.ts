@@ -12,22 +12,28 @@ export function useScan() {
   const [fromCache, setFromCache] = useState(false);
 
   useEffect(() => {
-    window.api.onScanProgress((data) => {
+    const detachProgress = window.api.onScanProgress((data) => {
       setProgress(data);
       if (data.stage === 'done') setState('done');
     });
 
-    window.api.onScanError((data) => {
+    const detachError = window.api.onScanError((data) => {
       setError(data);
       if (data.isFinal) setState('error');
     });
 
-    window.api.onScanComplete((data) => {
+    const detachComplete = window.api.onScanComplete((data) => {
       setEvents(data.events as ScrapedEvent[]);
       setFoodEvents(data.foodEvents as ScrapedEvent[]);
       setFromCache(data.fromCache ?? false);
       setState('done');
     });
+
+    return () => {
+      detachProgress();
+      detachError();
+      detachComplete();
+    };
   }, []);
 
   const startScan = useCallback(async (forceRefresh = false) => {

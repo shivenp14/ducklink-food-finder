@@ -23,6 +23,28 @@ interface ScanErrorData {
   isFinal: boolean;
 }
 
+interface UpdateStateData {
+  enabled: boolean;
+  status: 'disabled' | 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error';
+  currentVersion: string;
+  availableVersion: string | null;
+  downloadedVersion: string | null;
+  progress: number | null;
+  transferredBytes: number | null;
+  totalBytes: number | null;
+  message: string;
+  releaseDate: string | null;
+  lastCheckedAt: number | null;
+}
+
+function subscribe<T>(channel: string, cb: (value: T) => void): () => void {
+  const listener = (_event: Electron.IpcRendererEvent, value: T) => cb(value);
+  ipcRenderer.on(channel, listener);
+  return () => {
+    ipcRenderer.removeListener(channel, listener);
+  };
+}
+
 contextBridge.exposeInMainWorld('api', {
   // Scan
   startScan: (forceRefresh?: boolean) => ipcRenderer.invoke(IPC.SCAN_START, forceRefresh),
@@ -39,23 +61,23 @@ contextBridge.exposeInMainWorld('api', {
   getCacheInfo: () => ipcRenderer.invoke(IPC.CACHE_INFO),
   getCachedScan: () => ipcRenderer.invoke(IPC.CACHE_GET),
 
+  // App
+  getAppInfo: () => ipcRenderer.invoke(IPC.APP_INFO),
+
+  // Updates
+  getUpdateState: () => ipcRenderer.invoke(IPC.UPDATE_GET_STATE),
+  checkForUpdates: () => ipcRenderer.invoke(IPC.UPDATE_CHECK),
+  downloadUpdate: () => ipcRenderer.invoke(IPC.UPDATE_DOWNLOAD),
+  installUpdate: () => ipcRenderer.invoke(IPC.UPDATE_INSTALL),
+
   // Browser
   openExternal: (url: string) => ipcRenderer.invoke(IPC.BROWSER_OPEN_EXTERNAL, url),
 
   // Progress listeners
-  onScanProgress: (cb: (data: ScanProgressData) => void) => {
-    ipcRenderer.on(IPC.SCAN_PROGRESS, (_event, data) => cb(data));
-  },
-  onScanComplete: (cb: (data: ScanResultData) => void) => {
-    ipcRenderer.on(IPC.SCAN_COMPLETE, (_event, data) => cb(data));
-  },
-  onScanError: (cb: (data: ScanErrorData) => void) => {
-    ipcRenderer.on(IPC.SCAN_ERROR, (_event, data) => cb(data));
-  },
-  onBrowserUrlChanged: (cb: (url: string) => void) => {
-    ipcRenderer.on(IPC.BROWSER_URL_CHANGED, (_event, url) => cb(url));
-  },
-  onBrowserPreviewUpdated: (cb: (dataUrl: string) => void) => {
-    ipcRenderer.on(IPC.BROWSER_PREVIEW_UPDATED, (_event, dataUrl) => cb(dataUrl));
-  },
+  onScanProgress: (cb: (data: ScanProgressData) => void) => subscribe(IPC.SCAN_PROGRESS, cb),
+  onScanComplete: (cb: (data: ScanResultData) => void) => subscribe(IPC.SCAN_COMPLETE, cb),
+  onScanError: (cb: (data: ScanErrorData) => void) => subscribe(IPC.SCAN_ERROR, cb),
+  onBrowserUrlChanged: (cb: (url: string) => void) => subscribe(IPC.BROWSER_URL_CHANGED, cb),
+  onBrowserPreviewUpdated: (cb: (dataUrl: string) => void) => subscribe(IPC.BROWSER_PREVIEW_UPDATED, cb),
+  onUpdateStateChanged: (cb: (data: UpdateStateData) => void) => subscribe(IPC.UPDATE_STATE_CHANGED, cb),
 });

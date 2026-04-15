@@ -44,7 +44,8 @@ On first launch, enter your NVIDIA API key in the app settings.
 - `npm run typecheck` - Run TypeScript checks for main and renderer
 - `npm run pack` - Build and create an unpacked desktop app
 - `npm run dist` - Build and create distributable packages
-- `npm run dist:mac` - Build a macOS DMG
+- `npm run dist:mac` - Build the macOS release artifacts locally
+- `npm run dist:mac:publish` - Build and publish the macOS release to GitHub Releases
 - `npm run cli` - Run the CLI entry point
 - `npm run bench` - Run model benchmarking utilities
 
@@ -93,6 +94,37 @@ On first launch, enter your NVIDIA API key in the app settings.
 ## Packaging
 
 The macOS build outputs a DMG via Electron Builder.
+
+## Auto Updates
+
+The app now includes an in-app updater flow in Settings:
+
+- `Check for Updates` asks the update feed for a newer packaged release
+- `Download Update` pulls the new release without requiring a manual reinstall
+- `Restart to Update` closes the app and installs the downloaded build
+
+This project is configured to use GitHub Releases from `shivenp14/ducklink-food-finder`.
+
+To publish an update:
+
+```bash
+export GH_TOKEN=your_github_personal_access_token
+npm version patch
+npm run dist:mac:publish
+```
+
+That publish step uploads the generated `.dmg`, `.zip`, and update metadata needed by `electron-updater`.
+
+Your token needs GitHub permissions that can create releases and upload release assets for this repo.
+
+Testing flow:
+
+1. Install an older packaged version of the app.
+2. Publish a newer version to GitHub Releases.
+3. Open the installed older app and go to Settings.
+4. Press `Check for Updates`, then `Download Update`, then `Restart to Update`.
+
+Auto-updates remain intentionally disabled in `npm run dev`.
 
 ## License
 

@@ -23,6 +23,16 @@ export const IPC = {
   CACHE_INFO: 'cache:info',
   CACHE_GET: 'cache:get',
 
+  // App
+  APP_INFO: 'app:info',
+
+  // Updates
+  UPDATE_GET_STATE: 'update:getState',
+  UPDATE_CHECK: 'update:check',
+  UPDATE_DOWNLOAD: 'update:download',
+  UPDATE_INSTALL: 'update:install',
+  UPDATE_STATE_CHANGED: 'update:stateChanged',
+
   // Browser
   BROWSER_URL_CHANGED: 'browser:urlChanged',
   BROWSER_PREVIEW_UPDATED: 'browser:previewUpdated',
